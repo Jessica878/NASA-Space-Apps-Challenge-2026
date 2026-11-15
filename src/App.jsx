@@ -35,7 +35,8 @@ const initialScenario = {
   longitude: "-50.3408",
   date: "2026-11-14",
 };
-
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 function App() {
   const [scenarios, setScenarios] = useState([initialScenario]);
   const [activeScenario, setActiveScenario] = useState(1);
@@ -298,7 +299,7 @@ const comparisonInsights = comparisonMetrics.map((metric) => {
     setElevationError("");
     setElevationData(null);
 
-    const url = new URL("http://127.0.0.1:8000/elevation");
+    const url = new URL(`${API_BASE_URL}/elevation`);
     url.searchParams.set("latitude", lat);
     url.searchParams.set("longitude", lon);
 
@@ -353,7 +354,7 @@ const comparisonInsights = comparisonMetrics.map((metric) => {
     setTerrainError("");
     setTerrainData(null);
 
-    const url = new URL("http://127.0.0.1:8000/terrain-analysis");
+    const url = new URL(`${API_BASE_URL}/terrain-analysis`);
 
     url.searchParams.set("latitude", lat);
     url.searchParams.set("longitude", lon);
@@ -411,7 +412,7 @@ useEffect(() => {
 
         try {
           const url = new URL(
-            "http://127.0.0.1:8000/terrain-analysis"
+            `${API_BASE_URL}/terrain-analysis`
           );
 
           url.searchParams.set("latitude", lat);
@@ -480,7 +481,7 @@ useEffect(() => {
           });
 
           const response = await fetch(
-            `http://127.0.0.1:8000/mission-timeline?${params}`,
+            `${API_BASE_URL}/mission-timeline?${params}`,
             { signal: controller.signal }
           );
 
@@ -534,9 +535,8 @@ useEffect(() => {
     setVisibilityData(null);
 
     const url = new URL(
-      "http://127.0.0.1:8000/terrain-aware-visibility"
+      `${API_BASE_URL}/terrain-aware-visibility`
     );
-
     url.searchParams.set("latitude", lat);
     url.searchParams.set("longitude", lon);
     url.searchParams.set("date", currentScenario.date);
@@ -598,7 +598,7 @@ useEffect(() => {
       });
 
       const response = await fetch(
-        `http://127.0.0.1:8000/mission-timeline?${params}`
+        `${API_BASE_URL}/mission-timeline?${params}`
       );
 
       if (!response.ok) {
