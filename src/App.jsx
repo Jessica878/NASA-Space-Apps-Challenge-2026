@@ -49,6 +49,8 @@ function App() {
   const [terrainData, setTerrainData] = useState(null);
   const [terrainLoading, setTerrainLoading] = useState(false);
   const [terrainError, setTerrainError] = useState("");
+  // Terrain data for all scenarios in the comparison
+  const [comparisonTerrainData, setComparisonTerrainData] = useState({});
 
   // Combined terrain-aware Sun and Earth visibility
   const [visibilityData, setVisibilityData] = useState(null);
@@ -96,6 +98,57 @@ const earthVisibilityStatus = (() => {
 
   return allClear ? "Fully visible" : "Terrain obstruction";
 })();
+
+// Identify the strongest terrain candidate for each metric.
+const comparisonMetrics = [
+  {
+    key: "elevation_range_metres",
+    label: "Lowest elevation range",
+    unit: "m",
+  },
+  {
+    key: "mean_slope_degrees",
+    label: "Lowest mean slope",
+    unit: "°",
+  },
+  {
+    key: "maximum_slope_degrees",
+    label: "Lowest maximum slope",
+    unit: "°",
+  },
+  {
+    key: "mean_terrain_roughness_metres",
+    label: "Lowest terrain roughness",
+    unit: "m",
+  },
+];
+
+const comparisonInsights = comparisonMetrics.map((metric) => {
+  const candidates = scenarios
+    .map((scenario) => ({
+      name: scenario.name,
+      data: comparisonTerrainData[scenario.id],
+    }))
+    .filter(
+      (candidate) =>
+        candidate.data &&
+        !candidate.data.error &&
+        Number.isFinite(candidate.data[metric.key])
+    );
+
+  const best = candidates.reduce(
+    (lowest, candidate) =>
+      !lowest || candidate.data[metric.key] < lowest.data[metric.key]
+        ? candidate
+        : lowest,
+    null
+  );
+
+  return {
+    ...metric,
+    best,
+  };
+});
 
   const currentScenario = scenarios.find(
     (scenario) => scenario.id === activeScenario
@@ -167,6 +220,7 @@ const earthVisibilityStatus = (() => {
       setTerrainLoading(false);
       return;
     }
+    
 
     const lat = Number(latitude);
     const lon = Number(longitude);
@@ -216,6 +270,62 @@ const earthVisibilityStatus = (() => {
 
     return () => controller.abort();
   }, [latitude, longitude]);
+  // Retrieve terrain analysis for every mission scenario.
+useEffect(() => {
+  const controller = new AbortController();
+
+  const fetchAllTerrainData = async () => {
+    const results = {};
+
+    await Promise.all(
+      scenarios.map(async (scenario) => {
+        const lat = Number(scenario.latitude);
+        const lon = Number(scenario.longitude);
+
+        if (
+          scenario.latitude === "" ||
+          scenario.longitude === "" ||
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lon)
+        ) {
+          return;
+        }
+
+        try {
+          const url = new URL(
+            "http://127.0.0.1:8000/terrain-analysis"
+          );
+
+          url.searchParams.set("latitude", lat);
+          url.searchParams.set("longitude", lon);
+          url.searchParams.set("radius_metres", 1000);
+
+          const response = await fetch(url, {
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error("Terrain analysis failed.");
+          }
+
+          results[scenario.id] = await response.json();
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            results[scenario.id] = { error: error.message };
+          }
+        }
+      })
+    );
+
+    if (!controller.signal.aborted) {
+      setComparisonTerrainData(results);
+    }
+  };
+
+  fetchAllTerrainData();
+
+  return () => controller.abort();
+}, [scenarios]);
 
   // Retrieve combined terrain-aware Sun and Earth visibility.
   useEffect(() => {
@@ -1227,7 +1337,133 @@ useEffect(() => {
             </>
           )}
         </section>
+{/* SCENARIO COMPARISON */}
+<section className="metrics-section" id="comparison">
+  <div className="section-heading">
+    <div>
+      <span className="eyebrow">MISSION ANALYSIS</span>
+      <h2>Landing-site comparison</h2>
+      <p>
+        Compare NASA LOLA terrain measurements across
+        your candidate landing locations.
+      </p>
+    </div>
+  </div>
 
+  <div className="comparison-grid">
+    {scenarios.map((scenario) => {
+      const data = comparisonTerrainData[scenario.id];
+
+      return (
+        <article className="comparison-card" key={scenario.id}>
+          <h3>{scenario.name}</h3>
+          <p>{scenario.site}</p>
+
+          {!scenario.latitude || !scenario.longitude ? (
+            <p>Coordinates required</p>
+          ) : !data ? (
+            <p>Loading terrain measurements...</p>
+          ) : data.error ? (
+            <p>{data.error}</p>
+          ) : (
+            <>
+              <div className="comparison-value">
+                <span>Elevation range</span>
+                <strong>
+                  {data.elevation_range_metres.toFixed(2)} m
+                </strong>
+              </div>
+
+              <div className="comparison-value">
+                <span>Mean slope</span>
+                <strong>
+                  {data.mean_slope_degrees.toFixed(2)}°
+                </strong>
+              </div>
+
+              <div className="comparison-value">
+                <span>Maximum slope</span>
+                <strong>
+                  {data.maximum_slope_degrees.toFixed(2)}°
+                </strong>
+              </div>
+
+              <div className="comparison-value">
+                <span>Terrain roughness</span>
+                <strong>
+                  {data.mean_terrain_roughness_metres.toFixed(2)} m
+                </strong>
+              </div>
+            </>
+          )}
+        </article>
+      );
+    })}
+  </div>
+</section>
+{/* AUTOMATIC TERRAIN INSIGHTS */}
+<section className="metrics-section">
+  <div className="section-heading">
+    <div>
+      <span className="eyebrow">DECISION SUPPORT</span>
+      <h2>Automatic terrain assessment</h2>
+      <p>
+        Identifying the strongest candidate across each
+        NASA LOLA terrain measurement.
+      </p>
+    </div>
+  </div>
+  {/* OVERALL TERRAIN ASSESSMENT */}
+<div className="overall-assessment">
+  <div>
+    <span className="eyebrow">OVERALL TERRAIN ASSESSMENT</span>
+
+    <h3>
+      {comparisonInsights.every(
+        (insight) => insight.best?.name === comparisonInsights[0]?.best?.name
+      ) && comparisonInsights[0]?.best
+        ? comparisonInsights[0].best.name
+        : "No overall leader yet"}
+    </h3>
+
+    <p>
+      {comparisonInsights.every(
+        (insight) => insight.best?.name === comparisonInsights[0]?.best?.name
+      ) && comparisonInsights[0]?.best
+        ? "Best terrain profile across all four measured criteria."
+        : "Terrain results are still loading or different sites lead individual metrics."}
+    </p>
+  </div>
+
+  <span className="assessment-score">
+    {comparisonInsights.filter((insight) => insight.best).length}/4
+    metrics assessed
+  </span>
+</div>
+
+  <div className="comparison-grid">
+    {comparisonInsights.map((insight) => (
+      <article className="comparison-card" key={insight.key}>
+        <span className="eyebrow">{insight.label}</span>
+
+        {insight.best ? (
+          <>
+            <h3>{insight.best.name}</h3>
+            <div className="comparison-value">
+              <span>Measured value</span>
+              <strong>
+                {insight.best.data[insight.key].toFixed(2)}
+                {" "}{insight.unit}
+              </strong>
+            </div>
+          </>
+        ) : (
+          <p>Waiting for terrain measurements...</p>
+        )}
+      </article>
+    ))}
+  </div>
+</section>
         <footer>
           <span>LUNARIS · Lunar Mission Intelligence</span>
           <span>NASA LOLA terrain and NASA/JPL SPICE integration</span>

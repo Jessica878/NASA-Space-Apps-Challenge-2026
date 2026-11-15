@@ -542,3 +542,102 @@ footer {
     flex-direction: column;
   }
 }
+/* LANDING-SITE COMPARISON */
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.comparison-card {
+  background: #101a2a;
+  border: 1px solid #233247;
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.comparison-card h3 {
+  color: #e9edf5;
+  font: 600 17px 'Space Grotesk', sans-serif;
+  margin: 0 0 6px;
+}
+
+.comparison-card > p {
+  color: #8193aa;
+  font-size: 12px;
+  margin: 0 0 22px;
+}
+
+.comparison-value {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid #233247;
+}
+
+.comparison-value:last-child {
+  border-bottom: none;
+}
+
+.comparison-value span {
+  color: #9aa9bd;
+  font-size: 12px;
+}
+
+.comparison-value strong {
+  color: #e9edf5;
+  font: 600 15px 'Space Grotesk', sans-serif;
+  text-align: right;
+}
+/* OVERALL TERRAIN ASSESSMENT */
+
+.overall-assessment {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  margin: 24px 0;
+  background: linear-gradient(
+    120deg,
+    #14283a,
+    #101a2a
+  );
+  border: 1px solid #31516a;
+  border-radius: 12px;
+}
+
+.overall-assessment h3 {
+  color: #78d6b4;
+  font: 600 24px 'Space Grotesk', sans-serif;
+  margin: 10px 0 6px;
+}
+
+.overall-assessment p {
+  color: #9aa9bd;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.assessment-score {
+  color: #78d6b4;
+  background: rgba(85, 199, 176, 0.12);
+  border: 1px solid rgba(85, 199, 176, 0.35);
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .overall-assessment {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
