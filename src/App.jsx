@@ -51,6 +51,8 @@ function App() {
   const [terrainError, setTerrainError] = useState("");
   // Terrain data for all scenarios in the comparison
   const [comparisonTerrainData, setComparisonTerrainData] = useState({});
+  // Mission timeline data for every candidate landing site.
+  const [comparisonTimelineData, setComparisonTimelineData] = useState({});
 
   // Combined terrain-aware Sun and Earth visibility
   const [visibilityData, setVisibilityData] = useState(null);
@@ -122,6 +124,122 @@ const comparisonMetrics = [
     unit: "m",
   },
 ];
+// Calculate relative terrain scores and mission-environment scores.
+const suitabilityAssessments = scenarios.map((scenario) => {
+  const terrain = comparisonTerrainData[scenario.id];
+  const timeline = comparisonTimelineData[scenario.id];
+
+  if (
+    !terrain ||
+    terrain.error ||
+    !timeline ||
+    timeline.error
+  ) {
+    return {
+      id: scenario.id,
+      name: scenario.name,
+      loading: true,
+    };
+  }
+
+  const terrainKeys = [
+    "elevation_range_metres",
+    "mean_slope_degrees",
+    "maximum_slope_degrees",
+    "mean_terrain_roughness_metres",
+  ];
+
+  const terrainValues = terrainKeys.map((key) =>
+    Number(terrain[key])
+  );
+
+  if (!terrainValues.every(Number.isFinite)) {
+    return {
+      id: scenario.id,
+      name: scenario.name,
+      loading: true,
+    };
+  }
+
+  const terrainScore = terrainKeys.reduce((total, key) => {
+    const values = scenarios
+      .map((item) => comparisonTerrainData[item.id]?.[key])
+      .filter((value) => Number.isFinite(value));
+
+    const minimum = Math.min(...values);
+    const maximum = Math.max(...values);
+
+    const score =
+      maximum === minimum
+        ? 100
+        : ((maximum - terrain[key]) / (maximum - minimum)) * 100;
+
+    return total + score / terrainKeys.length;
+  }, 0);
+
+  const duration = timeline.duration_hours || 24;
+
+  const solarScore =
+    (timeline.summary.terrain_visible_sunlight_hours / duration) * 100;
+
+  const communicationsScore =
+    (timeline.summary.earth_fully_visible_hours / duration) * 100;
+
+  const overallScore =
+    terrainScore * 0.4 +
+    solarScore * 0.3 +
+    communicationsScore * 0.3;
+
+  return {
+    id: scenario.id,
+    name: scenario.name,
+    loading: false,
+    terrainScore,
+    solarScore,
+    communicationsScore,
+    overallScore,
+  };
+});
+
+// Identify the highest-scoring candidate landing site.
+const rankedAssessments = suitabilityAssessments
+  .filter((assessment) => !assessment.loading)
+  .sort((a, b) => b.overallScore - a.overallScore);
+
+const recommendedSite =
+  rankedAssessments.length >= 2
+    ? rankedAssessments[0]
+    : null;
+
+// Identify the strongest and weakest factors for the winner.
+const recommendationFactors = recommendedSite
+  ? [
+      {
+        label: "Terrain profile",
+        score: recommendedSite.terrainScore,
+      },
+      {
+        label: "Solar visibility",
+        score: recommendedSite.solarScore,
+      },
+      {
+        label: "Earth visibility",
+        score: recommendedSite.communicationsScore,
+      },
+    ]
+  : [];
+
+const strongestFactor = recommendationFactors.reduce(
+  (best, factor) =>
+    !best || factor.score > best.score ? factor : best,
+  null
+);
+
+const mainLimitation = recommendationFactors.reduce(
+  (worst, factor) =>
+    !worst || factor.score < worst.score ? factor : worst,
+  null
+);
 
 const comparisonInsights = comparisonMetrics.map((metric) => {
   const candidates = scenarios
@@ -323,6 +441,68 @@ useEffect(() => {
   };
 
   fetchAllTerrainData();
+
+  return () => controller.abort();
+}, [scenarios]);
+
+// Retrieve solar and Earth visibility data for every mission scenario.
+useEffect(() => {
+  const controller = new AbortController();
+
+  const fetchAllTimelineData = async () => {
+    const results = {};
+
+    await Promise.all(
+      scenarios.map(async (scenario) => {
+        const lat = Number(scenario.latitude);
+        const lon = Number(scenario.longitude);
+
+        if (
+          scenario.latitude === "" ||
+          scenario.longitude === "" ||
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lon) ||
+          !scenario.date
+        ) {
+          return;
+        }
+
+        try {
+          const params = new URLSearchParams({
+            latitude: String(lat),
+            longitude: String(lon),
+            date: scenario.date,
+            utc_time: "12:00:00",
+            duration_hours: "24",
+            interval_minutes: "120",
+            max_distance: "20000",
+            step: "240",
+          });
+
+          const response = await fetch(
+            `http://127.0.0.1:8000/mission-timeline?${params}`,
+            { signal: controller.signal }
+          );
+
+          if (!response.ok) {
+            throw new Error("Mission timeline request failed.");
+          }
+
+          results[scenario.id] = await response.json();
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            results[scenario.id] = { error: error.message };
+          }
+        }
+      })
+    );
+
+    if (!controller.signal.aborted) {
+      setComparisonTimelineData(results);
+    }
+  };
+
+  fetchAllTimelineData();
 
   return () => controller.abort();
 }, [scenarios]);
@@ -1463,6 +1643,98 @@ useEffect(() => {
       </article>
     ))}
   </div>
+</section>
+{/* MULTI-FACTOR LANDING SITE ASSESSMENT */}
+<section className="metrics-section">
+  <div className="section-heading">
+    <div>
+      <span className="eyebrow">MISSION DECISION SUPPORT</span>
+      <h2>Landing-site suitability</h2>
+      <p>
+        Comparing terrain, solar illumination, and
+        direct-to-Earth visibility across candidate sites.
+      </p>
+    </div>
+  </div>
+{/* RECOMMENDED LANDING SITE */}
+<div className="overall-assessment">
+  <div>
+    <span className="eyebrow">RECOMMENDED CANDIDATE</span>
+
+    <h3>
+      {recommendedSite
+        ? recommendedSite.name
+        : "Awaiting candidate analysis"}
+    </h3>
+
+    <p>
+      {recommendedSite
+        ? `Highest provisional suitability score: ${recommendedSite.overallScore.toFixed(1)} out of 100.`
+        : "At least two successfully analyzed sites are required."}
+    </p>
+
+    {recommendedSite && (
+      <>
+        <p>
+          Strongest factor: {strongestFactor?.label}
+          {" "}({strongestFactor?.score.toFixed(1)}%).
+        </p>
+
+        <p>
+          Main limitation: {mainLimitation?.label}
+          {" "}({mainLimitation?.score.toFixed(1)}%).
+        </p>
+      </>
+    )}
+  </div>
+
+  {recommendedSite && (
+    <span className="assessment-score">
+      {recommendedSite.overallScore.toFixed(1)} / 100
+    </span>
+  )}
+</div>
+  <div className="comparison-grid">
+    {suitabilityAssessments.map((assessment) => (
+      <article className="comparison-card" key={assessment.id}>
+        <span className="eyebrow">{assessment.name}</span>
+
+        {assessment.loading ? (
+          <p>Waiting for mission analysis...</p>
+        ) : (
+          <>
+            <h3>
+              {assessment.overallScore.toFixed(1)} / 100
+            </h3>
+
+            <div className="comparison-value">
+              <span>Terrain (40%)</span>
+              <strong>{assessment.terrainScore.toFixed(1)}%</strong>
+            </div>
+
+            <div className="comparison-value">
+              <span>Solar visibility (30%)</span>
+              <strong>{assessment.solarScore.toFixed(1)}%</strong>
+            </div>
+
+            <div className="comparison-value">
+              <span>Full Earth visibility (30%)</span>
+              <strong>
+                {assessment.communicationsScore.toFixed(1)}%
+              </strong>
+            </div>
+          </>
+        )}
+      </article>
+    ))}
+  </div>
+
+  <p className="assessment-note">
+    Scores are provisional comparative indicators, not
+    engineering certification. Terrain is normalized against
+    the current candidate sites. Solar and Earth visibility
+    are estimated over a 24-hour interval.
+  </p>
 </section>
         <footer>
           <span>LUNARIS · Lunar Mission Intelligence</span>
