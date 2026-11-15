@@ -1,4 +1,28 @@
 
+/* EARTH VISIBILITY STATUS */
+
+.visibility-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-size: 11px !important;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.visibility-status.visible {
+  color: #78d6b4;
+  background: rgba(85, 199, 176, 0.12);
+  border: 1px solid rgba(85, 199, 176, 0.35);
+}
+
+.visibility-status.obstructed {
+  color: #f2a0a0;
+  background: rgba(232, 121, 121, 0.12);
+  border: 1px solid rgba(232, 121, 121, 0.35);
+}
+
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
@@ -444,6 +468,77 @@ footer {
   }
 
   footer {
+    flex-direction: column;
+  }
+}
+
+/* NASA LOLA ELEVATION DISPLAY */
+.notice {
+  width: 100%;
+  min-height: 100px;
+  margin-top: 20px;
+  align-items: flex-start;
+}
+
+.notice > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
+  color: #a6d5f7;
+  margin: 10px 0;
+  font-weight: 700;
+}
+
+/* MISSION TIMELINE CHARTS */
+
+.timeline-chart {
+  background: #101a2a;
+  border: 1px solid #233247;
+  border-radius: 12px;
+  padding: 22px;
+  margin-top: 20px;
+  min-width: 0;
+}
+
+.timeline-chart-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.timeline-chart-heading h3 {
+  font: 600 16px 'Space Grotesk', sans-serif;
+  color: #e9edf5;
+  margin: 0;
+}
+
+.timeline-chart-heading span {
+  color: #8193aa;
+  font-size: 11px;
+}
+
+.timeline-chart .map-disclaimer {
+  color: #8b9ab0;
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 15px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #233247;
+}
+
+@media (max-width: 680px) {
+  .timeline-chart {
+    padding: 14px;
+  }
+
+  .timeline-chart-heading {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

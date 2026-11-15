@@ -1,0 +1,73 @@
+
+.lunar-map-wrapper {
+  background: #101a2a;
+  border: 1px solid #233247;
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lunar-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.map-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #8193aa;
+  font-weight: 700;
+}
+
+.lunar-map-header h3 {
+  font-size: 18px;
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 6px 0 0;
+  color: #e9edf5;
+}
+
+.map-status {
+  font-size: 10px;
+  color: #a6d5f7;
+  background: #1a3047;
+  padding: 7px 10px;
+  border-radius: 20px;
+}
+
+.lunar-map {
+  height: 480px;
+  width: 100%;
+  background: #0a1320;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lunar-map .ol-viewport {
+  border-radius: 8px;
+}
+
+.lunar-map .ol-control button {
+  background: #233b54;
+  color: white;
+}
+
+.map-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+  color: #91a1b7;
+  font-size: 10px;
+}
+
+.map-instruction {
+  color: #a6d5f7;
+  font-size: 11px;
+  margin-bottom: 0;
+  line-height: 1.6;
+}
