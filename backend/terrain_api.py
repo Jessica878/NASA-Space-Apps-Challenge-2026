@@ -22,6 +22,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:5174",
+        "https://nasa-space-apps-2026-fb8d3.web.app",
+        "https://nasa-space-apps-2026-fb8d3.firebaseapp.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -29,7 +31,7 @@ app.add_middleware(
 )
 
 # Location of the NASA LOLA elevation dataset.
-DEM_PATH = Path.home() / "Downloads" / "LDEM_60S_240MPP_ADJ.tiff"
+DEM_PATH = Path(__file__).resolve().parent / "LDEM_60S_240MPP_ADJ.tiff"
 
 # Open the elevation raster once when the API starts.
 if not DEM_PATH.exists():
